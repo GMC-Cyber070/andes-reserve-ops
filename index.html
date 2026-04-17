@@ -138,7 +138,7 @@ code{background:rgba(25,51,48,0.07);padding:2px 6px;border-radius:4px;font-size:
     <path d="M8 16.5 Q11 14.8 14 15.5 Q17 14.8 20 16.5" stroke="#FBEBDF" stroke-width="1" fill="none" stroke-linecap="round"/>
     <path d="M8.5 19 Q11.2 17.5 14 18.2 Q16.8 17.5 19.5 19" stroke="#FBEBDF" stroke-width="1" fill="none" stroke-linecap="round"/>
   </svg>
-  <div><div class="hbrand">ANDES RESERVE</div><div class="hsub">OPS TRACKER · v1.5</div></div>
+  <div><div class="hbrand">ANDES RESERVE</div><div class="hsub">OPS TRACKER · v1.6</div></div>
   <div class="hright"><div class="hdate" id="hdr-date"></div><span class="sdot" id="sdot" style="display:none"></span></div>
 </div>
 <div class="tabs">
@@ -1153,7 +1153,7 @@ function renderSettings(){
   const url=getApiUrl();const sc=url?'<span class="badge bok">Connected</span>':'<span class="badge bdanger">Not connected</span>';
   const varHtml=varietals.map((v,i)=>`<div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--bdr)"><input class="fi" id="var-${i}" type="text" value="${v.name}" style="flex:1;font-size:13px;padding:7px 10px"><button class="btn bsm bdanger2" onclick="delVarietal(${i})">×</button></div>`).join('');
   document.getElementById('page').innerHTML=`
-    <div class="card" style="background:rgba(25,51,48,0.04);border-color:var(--bdr)"><div style="display:flex;justify-content:space-between;align-items:center"><span style="font-size:12px;font-weight:700;color:var(--muted)">VERSION</span><span style="font-size:12px;font-weight:700;color:var(--leaf)">v1.5 · 17 Apr 2026</span></div></div>
+    <div class="card" style="background:rgba(25,51,48,0.04);border-color:var(--bdr)"><div style="display:flex;justify-content:space-between;align-items:center"><span style="font-size:12px;font-weight:700;color:var(--muted)">VERSION</span><span style="font-size:12px;font-weight:700;color:var(--leaf)">v1.6 · 17 Apr 2026</span></div></div>
     <div class="card"><div class="lbl">Database</div>
       <div class="srow"><div><div class="slbl">Google Sheets</div><div class="ssub2">${url?'Syncing':'Not connected'}</div></div>${sc}</div>
       ${!url?`<div class="fg" style="margin-top:12px"><label class="fl">Web App URL</label><input class="fi" id="s-url" type="url" placeholder="https://script.google.com/macros/s/..."><button class="btn bprimary bfull" onclick="saveUrl()" style="margin-top:8px">Connect</button></div>`:
