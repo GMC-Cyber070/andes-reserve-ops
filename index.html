@@ -950,21 +950,27 @@ async function sendPODEmail(order,photoDataUrl,sigDataUrl,receiverName){
   const url=getApiUrl();if(!url)return;
   const cust=db.coldBrewCustomers.find(c=>c.name===order.customerName||c.id===order.customerId);
   const rev=cbOrderRev(order);
-  // Build PDF as base64 HTML → send to Apps Script which emails it
-  const pdfHtml=buildPODHtml(order,rev,photoDataUrl,sigDataUrl,receiverName);
+  // Send images as separate base64 fields — Apps Script rebuilds the HTML/PDF
+  // Strip the data URL prefix to save space: "data:image/jpeg;base64,/9j/..." → "/9j/..."
+  const photoB64=(photoDataUrl||'').split(',')[1]||'';
+  const sigB64=(sigDataUrl||'').split(',')[1]||'';
+  const photoMime=(photoDataUrl||'').split(';')[0].split(':')[1]||'image/jpeg';
   try{
     await apiCall('sendPOD',{
       customerName:order.customerName,
       customerEmail:cust?cust.email:'',
       orderId:order.id,
-      orderDate:order.date,
+      orderDate:fmtD(order.date),
       city:order.city,
+      address:order.address||order.city,
       boxes10L:order.boxes10L||0,
       units15L:order.units15L||0,
-      revenue:rev.inc,
+      invoice:order.invoice||'',
       receiverName,
-      fulfilledDate:order.fulfilledDate||T(),
-      podHtml:pdfHtml
+      fulfilledDate:fmtD(order.fulfilledDate||T()),
+      photoB64,
+      photoMime,
+      sigB64
     });
     showToast('POD email sent');
   }catch(e){
