@@ -231,27 +231,14 @@ async function loadAll(){
     const data=await apiCall('getAll');
     cfg={...DEF,...(data.settings||{})};
     if(data.inventory)db.inventory=data.inventory;
-    if(data.customers){
-      // backwards compat: old 'customers' maps to coldBrewCustomers
-      db.coldBrewCustomers=data.customers||[];
-    }
     if(data.coldBrewCustomers)db.coldBrewCustomers=data.coldBrewCustomers;
     if(data.greenRoastedCustomers)db.greenRoastedCustomers=data.greenRoastedCustomers;
-    if(data.orders){
-      // backwards compat
-      const old=data.orders||[];
-      const cb=old.filter(o=>!o.orderType||o.orderType==='coldBrew');
-      const gr=old.filter(o=>o.orderType==='green'||o.orderType==='roasted');
-      db.coldBrewOrders=[...cb,...(data.coldBrewOrders||[])];
-      db.greenRoastedOrders=[...gr,...(data.greenRoastedOrders||[])];
-    }
     if(data.coldBrewOrders)db.coldBrewOrders=data.coldBrewOrders;
     if(data.greenRoastedOrders)db.greenRoastedOrders=data.greenRoastedOrders;
     if(data.roasts)db.roasts=data.roasts;
     if(data.brews)db.brews=data.brews;
     if(data.fridgeMoves)db.fridgeMoves=data.fridgeMoves;
     if(data.greenLog)db.greenLog=data.greenLog;
-    // load varietals from settings if stored
     if(data.settings&&data.settings.varietals){try{varietals=JSON.parse(data.settings.varietals);}catch(e){}}
     varietals.forEach(v=>{if(!db.inventory[v.id])db.inventory[v.id]={warnerBags:0,cavaliersBags:0};});
     saveLocal();setSync('ok');render();
@@ -405,13 +392,16 @@ function renderToday(){
 
 function qFulfilCB(i){
   const o=db.coldBrewOrders[i];if(!o)return;
-  // Go to POD screen
-  podOrderId=o.id;render();
+  if(o.city==='Brisbane'||o.city==='Other'||!o.city){
+    podOrderId=o.id;render();
+  } else {
+    directFulfilCB(db.coldBrewOrders.indexOf(o));
+  }
 }
 function qFulfilGR(i){
   const o=db.greenRoastedOrders[i];if(!o)return;const prev={...o};const r=grOrderRev(o);
   o.status='fulfilled';o.fulfilledDate=T();o.revenueExGst=r.ex;o.gst=r.gst;o.revenueIncGst=r.inc;
-  saveRow('greenRoastedOrders','saveOrder',o);
+  saveRow('greenRoastedOrders','saveGROrder',o);
   showToast(`${o.customerName} fulfilled — ${fmtA(r.inc)}`,()=>{db.greenRoastedOrders[i]=prev;saveRow('greenRoastedOrders','saveOrder',prev);render();});
   render();
 }
@@ -557,12 +547,29 @@ function addGROrder(){
   const r=grOrderRev(o);o.revenueExGst=r.ex;o.gst=r.gst;o.revenueIncGst=r.inc;
   ['gr-name','gr-inv','gr-notes'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
   const pre=document.getElementById('gr-pre');if(pre)pre.value='';
-  saveRow('greenRoastedOrders','saveOrder',o);showOrderForm=false;renderOrders();showToast(`Order added — ${fmtA(r.inc)}`);
+  saveRow('greenRoastedOrders','saveGROrder',o);showOrderForm=false;renderOrders();showToast(`Order added — ${fmtA(r.inc)}`);
 }
 
 function fulfilCB(i){
   const o=db.coldBrewOrders[i];if(!o)return;
-  podOrderId=o.id;render();
+  // Only Brisbane orders get POD screen
+  if(o.city==='Brisbane'||o.city==='Other'||!o.city){
+    podOrderId=o.id;render();
+  } else {
+    // Sydney/Melbourne — direct fulfil, no POD
+    directFulfilCB(i);
+  }
+}
+function directFulfilCB(i){
+  const o=db.coldBrewOrders[i];if(!o)return;
+  const prev={...o};const r=cbOrderRev(o);
+  o.status='fulfilled';o.fulfilledDate=T();o.revenueExGst=r.ex;o.gst=r.gst;o.revenueIncGst=r.inc;
+  const mv={id:uid(),date:T(),type:'out-inter',boxes10L:Number(o.boxes10L)||0,units15L:Number(o.units15L)||0,slots:slots(Number(o.boxes10L)||0,Number(o.units15L)||0),notes:`Order: ${o.customerName}`,source:'auto',createdAt:new Date().toISOString()};
+  db.fridgeMoves.push(mv);
+  if(o.recurring){const nd=new Date(o.date);nd.setDate(nd.getDate()+7);db.coldBrewOrders.push({...o,id:uid(),date:nd.toISOString().slice(0,10),status:'pending',fulfilledDate:'',weekStart:wStart(nd.toISOString().slice(0,10))});}
+  saveRow('coldBrewOrders','saveOrder',o);saveRow('fridgeMoves','saveFridgeMove',mv);
+  showToast(`${o.customerName} fulfilled — ${fmtA(r.inc)}`,()=>{db.coldBrewOrders[i]=prev;db.fridgeMoves=db.fridgeMoves.filter(m=>m.id!==mv.id);saveRow('coldBrewOrders','saveOrder',prev);delRow('fridgeMoves','deleteFridgeMove',mv.id);renderColdBrewOrders();});
+  renderColdBrewOrders();
 }
 function completeFulfilCB(orderId,photoDataUrl,signatureDataUrl,receiverName){
   const i=db.coldBrewOrders.findIndex(x=>x.id===orderId);
@@ -585,12 +592,12 @@ function delCBOrd(id){showModal('Delete this order?','',()=>{delRow('coldBrewOrd
 function fulfilGR(i){
   const o=db.greenRoastedOrders[i];if(!o)return;const prev={...o};const r=grOrderRev(o);
   o.status='fulfilled';o.fulfilledDate=T();o.revenueExGst=r.ex;o.gst=r.gst;o.revenueIncGst=r.inc;
-  saveRow('greenRoastedOrders','saveOrder',o);
+  saveRow('greenRoastedOrders','saveGROrder',o);
   showToast(`${o.customerName} fulfilled — ${fmtA(r.inc)}`,()=>{db.greenRoastedOrders[i]=prev;saveRow('greenRoastedOrders','saveOrder',prev);renderGreenRoastedOrders();});
   renderGreenRoastedOrders();
 }
-function unfulfilGR(i){const o=db.greenRoastedOrders[i];if(!o)return;o.status='pending';o.fulfilledDate='';saveRow('greenRoastedOrders','saveOrder',o);renderGreenRoastedOrders();}
-function delGROrd(id){showModal('Delete this order?','',()=>{delRow('greenRoastedOrders','deleteOrder',id);renderGreenRoastedOrders();});}
+function unfulfilGR(i){const o=db.greenRoastedOrders[i];if(!o)return;o.status='pending';o.fulfilledDate='';saveRow('greenRoastedOrders','saveGROrder',o);renderGreenRoastedOrders();}
+function delGROrd(id){showModal('Delete this order?','',()=>{delRow('greenRoastedOrders','deleteGROrder',id);renderGreenRoastedOrders();});}
 function saveCBEdit(id){
   const o=db.coldBrewOrders.find(x=>x.id===id);if(!o)return;
   const d=document.getElementById('ed-date-'+id),b10=document.getElementById('ed-10L-'+id),b15=document.getElementById('ed-15L-'+id),inv=document.getElementById('ed-inv-'+id),notes=document.getElementById('ed-notes-'+id);
@@ -615,7 +622,7 @@ function saveGREdit(id){
   o.weekStart=wStart(o.date);
   const r=grOrderRev(o);o.revenueExGst=r.ex;o.gst=r.gst;o.revenueIncGst=r.inc;
   editingOrderId=null;
-  saveRow('greenRoastedOrders','saveOrder',o);renderGreenRoastedOrders();showToast('Order updated');
+  saveRow('greenRoastedOrders','saveGROrder',o);renderGreenRoastedOrders();showToast('Order updated');
 }
 
 /* ── SUPPLY ── */
@@ -1081,7 +1088,7 @@ function addCust(type){
   } else {
     row.varietalPrices={};
     varietals.forEach(v=>{const el=document.getElementById(`c-vp-${v.id}`);row.varietalPrices[v.id]=parseFloat(el?el.value:0)||0;});
-    saveRow('greenRoastedCustomers','saveCustomer',row);
+    saveRow('greenRoastedCustomers','saveGRCustomer',row);
   }
   showToast(`${name} added`);renderCustomers(type);
 }
@@ -1093,7 +1100,7 @@ function qOrderFor(type,cid){
     else{const pre=document.getElementById('gr-pre');if(pre){pre.value=cid;prefillGR();}}
   },80);
 }
-function delCust(type,id){showModal('Delete customer?','Order history will remain.',()=>{delRow(type==='coldBrew'?'coldBrewCustomers':'greenRoastedCustomers','deleteCustomer',id);renderCustomers(type);});}
+function delCust(type,id){showModal('Delete customer?','Order history will remain.',()=>{delRow(type==='coldBrew'?'coldBrewCustomers':'greenRoastedCustomers',type==='coldBrew'?'deleteCustomer':'deleteGRCustomer',id);renderCustomers(type);});}
 
 /* ── SETTINGS ── */
 function renderSettings(){
