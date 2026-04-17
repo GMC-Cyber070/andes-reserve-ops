@@ -241,6 +241,15 @@ async function loadAll(){
     if(data.greenLog)db.greenLog=data.greenLog;
     if(data.settings&&data.settings.varietals){try{varietals=JSON.parse(data.settings.varietals);}catch(e){}}
     varietals.forEach(v=>{if(!db.inventory[v.id])db.inventory[v.id]={warnerBags:0,cavaliersBags:0};});
+    // Normalise legacy orders — fix status and recurring fields from old schema
+    db.coldBrewOrders=db.coldBrewOrders.map(normaliseLegacyOrder);
+    db.greenRoastedOrders=db.greenRoastedOrders.map(normaliseLegacyOrder);
+    // Fix ISO timestamps in roasts, brews, fridgeMoves
+    const fixDate=d=>d&&d.length>10?d.slice(0,10):d||'';
+    db.roasts=db.roasts.map(r=>({...r,date:fixDate(r.date),pickupDate:fixDate(r.pickupDate)}));
+    db.brews=db.brews.map(b=>({...b,brewDate:fixDate(b.brewDate),pickupDate:fixDate(b.pickupDate)}));
+    db.fridgeMoves=db.fridgeMoves.map(m=>({...m,date:fixDate(m.date)}));
+    db.greenLog=db.greenLog.map(l=>({...l,date:fixDate(l.date)}));
     saveLocal();setSync('ok');render();
   }catch(e){if(e.message!=='NO_URL'){setSync('err');showToastErr('Could not sync — using cached data');}}
 }
@@ -262,6 +271,31 @@ async function syncCfg(){
 }
 
 const T=()=>new Date().toISOString().slice(0,10);
+
+// Normalise orders that were saved with the old schema
+function normaliseLegacyOrder(o){
+  // Fix status: old schema stored status in 'recurring' field
+  // e.g. recurring:"pending", recurring:"fulfilled" — should be status field
+  if(!o.status||o.status===''){
+    if(o.recurring==='fulfilled'||o.fulfilledDate){
+      o.status='fulfilled';
+      o.recurring=false;
+    } else {
+      o.status='pending';
+      o.recurring=false;
+    }
+  }
+  // Fix recurring: should be boolean
+  if(o.recurring==='pending'||o.recurring==='')o.recurring=false;
+  if(o.recurring==='true')o.recurring=true;
+  // Fix orderType
+  if(!o.orderType)o.orderType='coldBrew';
+  // Fix date: strip time component from ISO timestamps
+  if(o.date&&o.date.length>10)o.date=o.date.slice(0,10);
+  if(o.weekStart&&o.weekStart.length>10)o.weekStart=wStart(o.date);
+  if(o.fulfilledDate&&o.fulfilledDate.length>10)o.fulfilledDate=o.fulfilledDate.slice(0,10);
+  return o;
+}
 const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,5);
 const fmtD=d=>{if(!d)return'—';const s=String(d);const iso=s.length>10?s.slice(0,10):s;const p=iso.split('-');if(p.length<3)return s;return`${p[2].slice(0,2)}/${p[1]}/${p[0]}`;};
 const fmtA=n=>'$'+Number(n||0).toFixed(2);
