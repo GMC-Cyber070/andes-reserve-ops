@@ -138,7 +138,7 @@ code{background:rgba(25,51,48,0.07);padding:2px 6px;border-radius:4px;font-size:
     <path d="M8 16.5 Q11 14.8 14 15.5 Q17 14.8 20 16.5" stroke="#FBEBDF" stroke-width="1" fill="none" stroke-linecap="round"/>
     <path d="M8.5 19 Q11.2 17.5 14 18.2 Q16.8 17.5 19.5 19" stroke="#FBEBDF" stroke-width="1" fill="none" stroke-linecap="round"/>
   </svg>
-  <div><div class="hbrand">ANDES RESERVE</div><div class="hsub">OPS TRACKER · v1.7</div></div>
+  <div><div class="hbrand">ANDES RESERVE</div><div class="hsub">OPS TRACKER · v1.9</div></div>
   <div class="hright"><div class="hdate" id="hdr-date"></div><span class="sdot" id="sdot" style="display:none"></span></div>
 </div>
 <div class="tabs">
@@ -513,22 +513,19 @@ function renderColdBrewOrders(){
       <label class="fchk"><input type="checkbox" id="o-rec"> Recurring weekly</label>
       <div style="display:flex;align-items:center;gap:10px;margin-top:12px"><button class="btn bprimary" style="flex:1" onclick="addCBOrder()">Add order</button><span id="o-hint" class="hint"></span></div>
     </div>
-    <div class="card-mint"><div class="lbl">Fridge vs committed</div>
-      <div style="font-size:13px;line-height:2.2;color:var(--dim)">
-        <div>Slots: <strong style="color:var(--leaf)">${fs}</strong> avail · ${cs} out · <strong style="color:${rs<0?'var(--danger-t)':rs<3?'var(--warn-t)':'var(--leaf)'}">${rs} free</strong></div>
-        <div>Revenue fulfilled: <strong style="color:var(--ok-t)">${fmtA(wrf)}</strong></div>
-      </div>
-    </div>
     <div class="card">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;gap:6px;flex-wrap:wrap">
-        <div class="lbl" style="margin:0">Cold brew orders</div>
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:12px;gap:6px;flex-wrap:wrap">
+        <div>
+          <div class="lbl" style="margin:0">Cold brew orders</div>
+          <div style="font-size:11px;color:var(--muted);margin-top:3px;font-weight:500"><span style="color:${rs<0?'var(--danger-t)':'var(--leaf)'};font-weight:700">${rs} free</span> · <span style="color:var(--ok-t);font-weight:700">${fmtA(wrf)}</span> fulfilled</div>
+        </div>
         <div style="display:flex;gap:5px;flex-wrap:wrap">
           <select id="_wf" onchange="renderColdBrewOrders()" style="font-size:11px;font-weight:600;padding:5px 7px;border:1.5px solid var(--bdr2);border-radius:7px;background:#fff;color:var(--leaf);font-family:'Figtree',sans-serif">${wo}</select>
           <select id="_cf" onchange="renderColdBrewOrders()" style="font-size:11px;font-weight:600;padding:5px 7px;border:1.5px solid var(--bdr2);border-radius:7px;background:#fff;color:var(--leaf);font-family:'Figtree',sans-serif"><option value="all">All</option><option>Brisbane</option><option>Sydney</option><option>Melbourne</option></select>
           <select id="_sf" onchange="renderColdBrewOrders()" style="font-size:11px;font-weight:600;padding:5px 7px;border:1.5px solid var(--bdr2);border-radius:7px;background:#fff;color:var(--leaf);font-family:'Figtree',sans-serif"><option value="all">All</option><option value="pending">Pending</option><option value="fulfilled">Fulfilled</option></select>
         </div>
       </div>
-      ${fil.length?fil.map(o=>{const idx=db.coldBrewOrders.indexOf(o),d=dUntil(o.date),r=cbOrderRev(o);const sb=o.status==='fulfilled'?'<span class="badge bok">Done</span>':d<0?'<span class="badge bdanger">Overdue</span>':d===0?'<span class="badge bwarn">Today</span>':'<span class="badge binfo">Pending</span>';const rec=o.recurring?'<span class="badge bneutral" style="margin-left:4px;font-size:9px">↻</span>':'';const isEd=editingOrderId===o.id;const eForm=isEd?`<div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--bdr)"><div class="fr" style="margin-bottom:8px"><div><label class="fl">Date</label><input class="fi" id="ed-date-${o.id}" type="date" value="${o.date}" style="font-size:14px;padding:8px 10px"></div><div><label class="fl">Invoice</label><input class="fi" id="ed-inv-${o.id}" type="text" value="${o.invoice||''}" placeholder="optional" style="font-size:14px;padding:8px 10px"></div></div><div class="fr3" style="margin-bottom:8px"><div><label class="fl">10L</label><input class="fi" id="ed-10L-${o.id}" type="number" min="0" value="${o.boxes10L||0}" style="font-size:14px;padding:8px 10px"></div><div><label class="fl">1.5L</label><input class="fi" id="ed-15L-${o.id}" type="number" min="0" value="${o.units15L||0}" style="font-size:14px;padding:8px 10px"></div><div><label class="fl">Notes</label><input class="fi" id="ed-notes-${o.id}" type="text" value="${o.notes||''}" placeholder="—" style="font-size:14px;padding:8px 10px"></div></div><div style="display:flex;gap:8px"><button class="btn bprimary" style="flex:1" onclick="saveCBEdit('${o.id}')">Save</button><button class="btn bghost" onclick="editingOrderId=null;renderColdBrewOrders()">Cancel</button></div></div>`:'';return`<div class="orow" style="flex-direction:column;align-items:stretch"><div style="display:flex;align-items:flex-start;gap:10px"><div class="oinfo"><div class="oname">${o.customerName}${rec} ${sb}</div><div class="ometa">${o.city} · ${fmtD(o.date)}</div><div class="oqty">${o.boxes10L||0}×10L · ${o.units15L||0}×1.5L · ${fmtA(r.inc)}</div></div><div style="display:flex;flex-direction:column;gap:5px;align-items:flex-end">${o.status!=='fulfilled'?`<button class="btn bsm bsuccess" onclick="fulfilCB(${idx})">Fulfill</button>`:`<button class="btn bsm bghost" onclick="unfulfilCB(${idx})">Undo</button>`}<button class="btn bsm bghost" onclick="editingOrderId=editingOrderId==='${o.id}'?null:'${o.id}';renderColdBrewOrders()">${isEd?'✕':'Edit'}</button><button class="btn bsm bdanger2" onclick="delCBOrd('${o.id}')">Del</button></div></div>${eForm}</div>`;}).join(''):'<div class="empty">No orders found</div>'}
+      ${fil.length?fil.map(o=>{const idx=db.coldBrewOrders.indexOf(o),d=dUntil(o.date),r=cbOrderRev(o);const sb=o.status==='fulfilled'?'<span class="badge bok">Done</span>':d<0?'<span class="badge bdanger">Overdue</span>':d===0?'<span class="badge bwarn">Today</span>':'<span class="badge binfo">Pending</span>';const rec=o.recurring?'<span class="badge bneutral" style="margin-left:4px;font-size:9px">↻</span>':'';const isEd=editingOrderId===o.id;const eForm=isEd?`<div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--bdr)"><div class="fr" style="margin-bottom:8px"><div><label class="fl">Date</label><input class="fi" id="ed-date-${o.id}" type="date" value="${o.date}" style="font-size:14px;padding:8px 10px"></div><div><label class="fl">Invoice</label><input class="fi" id="ed-inv-${o.id}" type="text" value="${o.invoice||''}" placeholder="optional" style="font-size:14px;padding:8px 10px"></div></div><div class="fr3" style="margin-bottom:8px"><div><label class="fl">10L</label><input class="fi" id="ed-10L-${o.id}" type="number" min="0" value="${o.boxes10L||0}" style="font-size:14px;padding:8px 10px"></div><div><label class="fl">1.5L</label><input class="fi" id="ed-15L-${o.id}" type="number" min="0" value="${o.units15L||0}" style="font-size:14px;padding:8px 10px"></div><div><label class="fl">Notes</label><input class="fi" id="ed-notes-${o.id}" type="text" value="${o.notes||''}" placeholder="—" style="font-size:14px;padding:8px 10px"></div></div><div style="display:flex;gap:8px"><button class="btn bprimary" style="flex:1" onclick="saveCBEdit('${o.id}')">Save</button><button class="btn bghost" onclick="editingOrderId=null;renderColdBrewOrders()">Cancel</button></div></div>`:'';return`<div class="orow" style="flex-direction:column;align-items:stretch"><div style="display:flex;align-items:flex-start;gap:10px"><div class="oinfo"><div class="oname">${o.customerName}${rec} ${sb}</div><div class="ometa">${o.city} · ${fmtD(o.date)}</div><div class="oqty">${o.boxes10L||0}×10L · ${o.units15L||0}×1.5L · ${fmtA(r.inc)}</div></div><div style="display:flex;flex-direction:column;gap:5px;align-items:flex-end">${o.status!=='fulfilled'?`<button class="btn bsm bsuccess" onclick="fulfilCB(${idx})">Fulfill</button>`:`<button class="btn bsm bghost" onclick="unfulfilCB(${idx})">Undo</button>`}<button class="btn bsm bghost" style="font-weight:700;font-size:18px;line-height:1;padding:6px 10px" onclick="openOrderActions('coldBrew','${o.id}')" title="More">⋯</button>${o.poFileUrl?'<span style="font-size:10px;color:var(--leaf);font-weight:700;margin-top:2px">📎 PO</span>':''}</div></div>${eForm}</div>`;}).join(''):'<div class="empty">No orders found</div>'}
     </div>`;
   if(document.getElementById('_wf'))document.getElementById('_wf').value=aw;
   if(document.getElementById('_cf'))document.getElementById('_cf').value=cf;
@@ -564,7 +561,7 @@ function renderGreenRoastedOrders(){
           <select id="_gsf" onchange="renderGreenRoastedOrders()" style="font-size:11px;font-weight:600;padding:5px 7px;border:1.5px solid var(--bdr2);border-radius:7px;background:#fff;color:var(--leaf);font-family:'Figtree',sans-serif"><option value="all">All</option><option value="pending">Pending</option><option value="fulfilled">Fulfilled</option></select>
         </div>
       </div>
-      ${fil.length?fil.map(o=>{const idx=db.greenRoastedOrders.indexOf(o),d=dUntil(o.date),r=grOrderRev(o);const sb=o.status==='fulfilled'?'<span class="badge bok">Done</span>':d<0?'<span class="badge bdanger">Overdue</span>':d===0?'<span class="badge bwarn">Today</span>':'<span class="badge binfo">Pending</span>';const tb=o.orderType==='green'?'<span class="badge bpurple">Green</span>':'<span class="badge bcoral">Roasted</span>';const isEd=editingOrderId===o.id;const eForm=isEd?`<div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--bdr)"><div class="fr" style="margin-bottom:8px"><div><label class="fl">Date</label><input class="fi" id="gred-date-${o.id}" type="date" value="${o.date}" style="font-size:14px;padding:8px 10px"></div><div><label class="fl">Kg</label><input class="fi" id="gred-kg-${o.id}" type="number" step="0.1" min="0" value="${o.kg||0}" style="font-size:14px;padding:8px 10px"></div></div><div class="fr" style="margin-bottom:8px"><div><label class="fl">Varietal</label><select class="fi" id="gred-var-${o.id}" style="font-size:14px;padding:8px 10px">${varOpts(o.varietal)}</select></div><div><label class="fl">Invoice</label><input class="fi" id="gred-inv-${o.id}" type="text" value="${o.invoice||''}" placeholder="optional" style="font-size:14px;padding:8px 10px"></div></div><div style="display:flex;gap:8px"><button class="btn bprimary" style="flex:1" onclick="saveGREdit('${o.id}')">Save</button><button class="btn bghost" onclick="editingOrderId=null;renderGreenRoastedOrders()">Cancel</button></div></div>`:'';return`<div class="orow" style="flex-direction:column;align-items:stretch"><div style="display:flex;align-items:flex-start;gap:10px"><div class="oinfo"><div class="oname">${o.customerName} ${tb} ${sb}</div><div class="ometa">${varName(o.varietal)} · ${fmtD(o.date)}</div><div class="oqty">${o.kg||0} kg · ${fmtA(r.inc)}</div></div><div style="display:flex;flex-direction:column;gap:5px;align-items:flex-end">${o.status!=='fulfilled'?`<button class="btn bsm bsuccess" onclick="fulfilGR(${idx})">Fulfill</button>`:`<button class="btn bsm bghost" onclick="unfulfilGR(${idx})">Undo</button>`}<button class="btn bsm bghost" onclick="editingOrderId=editingOrderId==='${o.id}'?null:'${o.id}';renderGreenRoastedOrders()">${isEd?'✕':'Edit'}</button><button class="btn bsm bdanger2" onclick="delGROrd('${o.id}')">Del</button></div></div>${eForm}</div>`;}).join(''):'<div class="empty">No orders found</div>'}
+      ${fil.length?fil.map(o=>{const idx=db.greenRoastedOrders.indexOf(o),d=dUntil(o.date),r=grOrderRev(o);const sb=o.status==='fulfilled'?'<span class="badge bok">Done</span>':d<0?'<span class="badge bdanger">Overdue</span>':d===0?'<span class="badge bwarn">Today</span>':'<span class="badge binfo">Pending</span>';const tb=o.orderType==='green'?'<span class="badge bpurple">Green</span>':'<span class="badge bcoral">Roasted</span>';const isEd=editingOrderId===o.id;const eForm=isEd?`<div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--bdr)"><div class="fr" style="margin-bottom:8px"><div><label class="fl">Date</label><input class="fi" id="gred-date-${o.id}" type="date" value="${o.date}" style="font-size:14px;padding:8px 10px"></div><div><label class="fl">Kg</label><input class="fi" id="gred-kg-${o.id}" type="number" step="0.1" min="0" value="${o.kg||0}" style="font-size:14px;padding:8px 10px"></div></div><div class="fr" style="margin-bottom:8px"><div><label class="fl">Varietal</label><select class="fi" id="gred-var-${o.id}" style="font-size:14px;padding:8px 10px">${varOpts(o.varietal)}</select></div><div><label class="fl">Invoice</label><input class="fi" id="gred-inv-${o.id}" type="text" value="${o.invoice||''}" placeholder="optional" style="font-size:14px;padding:8px 10px"></div></div><div style="display:flex;gap:8px"><button class="btn bprimary" style="flex:1" onclick="saveGREdit('${o.id}')">Save</button><button class="btn bghost" onclick="editingOrderId=null;renderGreenRoastedOrders()">Cancel</button></div></div>`:'';return`<div class="orow" style="flex-direction:column;align-items:stretch"><div style="display:flex;align-items:flex-start;gap:10px"><div class="oinfo"><div class="oname">${o.customerName} ${tb} ${sb}</div><div class="ometa">${varName(o.varietal)} · ${fmtD(o.date)}</div><div class="oqty">${o.kg||0} kg · ${fmtA(r.inc)}</div></div><div style="display:flex;flex-direction:column;gap:5px;align-items:flex-end">${o.status!=='fulfilled'?`<button class="btn bsm bsuccess" onclick="fulfilGR(${idx})">Fulfill</button>`:`<button class="btn bsm bghost" onclick="unfulfilGR(${idx})">Undo</button>`}<button class="btn bsm bghost" style="font-weight:700;font-size:18px;line-height:1;padding:6px 10px" onclick="openOrderActions('greenRoasted','${o.id}')" title="More">⋯</button>${o.poFileUrl?'<span style="font-size:10px;color:var(--leaf);font-weight:700;margin-top:2px">📎 PO</span>':''}</div></div>${eForm}</div>`;}).join(''):'<div class="empty">No orders found</div>'}
     </div>`;
   if(document.getElementById('_gwf'))document.getElementById('_gwf').value=aw;
   if(document.getElementById('_gsf'))document.getElementById('_gsf').value=sf;
@@ -1014,6 +1011,192 @@ function submitPOD(orderId){
 
 /* ── SEND POD EMAIL ─────────────────────────────────────── */
 
+// ── Order actions sheet (... menu) ──────────────────────────
+
+function openOrderActions(orderType, orderId){
+  const arr = orderType==='coldBrew' ? db.coldBrewOrders : db.greenRoastedOrders;
+  const o = arr.find(x => x.id === orderId);
+  if(!o) return;
+
+  const sheet = document.createElement('div');
+  sheet.id = 'order-actions-sheet';
+  sheet.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.4);z-index:9999;display:flex;align-items:flex-end;justify-content:center';
+
+  const poHasFile = !!o.poFileUrl;
+  const editFn = orderType==='coldBrew'
+    ? `editingOrderId='${o.id}';renderColdBrewOrders();closeOrderActions()`
+    : `editingOrderId='${o.id}';renderGreenRoastedOrders();closeOrderActions()`;
+  const delFn = orderType==='coldBrew'
+    ? `delCBOrd('${o.id}');closeOrderActions()`
+    : `delGROrd('${o.id}');closeOrderActions()`;
+
+  const poRow = poHasFile
+    ? `<button class="btn bghost" style="width:100%;margin-bottom:8px;text-align:left;justify-content:flex-start;padding:14px 16px" onclick="closeOrderActions();window.open('${o.poFileUrl}','_blank')">
+         <span style="font-size:18px;margin-right:10px">📄</span>View / Print PO
+       </button>
+       <button class="btn bghost" style="width:100%;margin-bottom:8px;text-align:left;justify-content:flex-start;padding:14px 16px" onclick="closeOrderActions();openPOUpload('${orderType}','${o.id}')">
+         <span style="font-size:18px;margin-right:10px">↻</span>Replace PO
+       </button>
+       <button class="btn bghost" style="width:100%;margin-bottom:8px;text-align:left;justify-content:flex-start;padding:14px 16px;color:var(--danger-t)" onclick="closeOrderActions();removePOFile('${orderType}','${o.id}')">
+         <span style="font-size:18px;margin-right:10px">✕</span>Remove PO
+       </button>`
+    : `<button class="btn bghost" style="width:100%;margin-bottom:8px;text-align:left;justify-content:flex-start;padding:14px 16px" onclick="closeOrderActions();openPOUpload('${orderType}','${o.id}')">
+         <span style="font-size:18px;margin-right:10px">📎</span>Attach PO
+       </button>`;
+
+  sheet.innerHTML = `
+    <div style="background:#fff;border-radius:16px 16px 0 0;width:100%;max-width:520px;padding:14px 16px 24px;box-shadow:0 -4px 24px rgba(0,0,0,0.15)">
+      <div style="width:36px;height:4px;background:#ddd;border-radius:2px;margin:0 auto 14px"></div>
+      <div style="font-size:11px;font-weight:700;letter-spacing:.06em;color:var(--muted);text-transform:uppercase;margin-bottom:2px">Order</div>
+      <div style="font-size:15px;font-weight:700;color:var(--leaf);margin-bottom:16px">${o.customerName}</div>
+      <button class="btn bghost" style="width:100%;margin-bottom:8px;text-align:left;justify-content:flex-start;padding:14px 16px" onclick="${editFn}">
+        <span style="font-size:18px;margin-right:10px">✎</span>Edit order
+      </button>
+      ${poRow}
+      <div style="height:1px;background:var(--bdr);margin:6px 0 10px"></div>
+      <button class="btn bghost" style="width:100%;margin-bottom:8px;text-align:left;justify-content:flex-start;padding:14px 16px;color:var(--danger-t)" onclick="${delFn}">
+        <span style="font-size:18px;margin-right:10px">🗑</span>Delete order
+      </button>
+      <button class="btn bghost" style="width:100%" onclick="closeOrderActions()">Cancel</button>
+    </div>`;
+  document.body.appendChild(sheet);
+  sheet.onclick = e => { if(e.target===sheet) closeOrderActions(); };
+}
+
+function closeOrderActions(){
+  const s = document.getElementById('order-actions-sheet');
+  if(s) s.remove();
+}
+
+// ── Purchase Order file upload ──────────────────────────────
+
+let _poUploadCtx = null; // { orderType, orderId }
+
+function openPOUpload(orderType, orderId){
+  _poUploadCtx = { orderType, orderId };
+  let input = document.getElementById('po-file-input');
+  if(!input){
+    input = document.createElement('input');
+    input.type = 'file';
+    input.id = 'po-file-input';
+    input.style.display = 'none';
+    input.onchange = handlePOFile;
+    document.body.appendChild(input);
+  }
+  input.value = '';
+  input.click();
+}
+
+function openPOMenu(orderType, orderId){
+  const arr = orderType==='coldBrew' ? db.coldBrewOrders : db.greenRoastedOrders;
+  const o = arr.find(x => x.id === orderId);
+  if(!o || !o.poFileUrl) return;
+  // Build a small action sheet
+  const sheet = document.createElement('div');
+  sheet.id = 'po-sheet';
+  sheet.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.4);z-index:9999;display:flex;align-items:flex-end;justify-content:center';
+  sheet.innerHTML = `
+    <div style="background:#fff;border-radius:16px 16px 0 0;width:100%;max-width:520px;padding:20px 18px 24px;box-shadow:0 -4px 24px rgba(0,0,0,0.15)">
+      <div style="text-align:center;width:32px;height:4px;background:#ddd;border-radius:2px;margin:0 auto 16px"></div>
+      <div style="font-size:11px;font-weight:700;letter-spacing:.06em;color:var(--muted);text-transform:uppercase;margin-bottom:4px">PURCHASE ORDER</div>
+      <div style="font-size:14px;font-weight:600;color:var(--leaf);margin-bottom:14px;word-break:break-all">${o.poFileName||'PO file'}</div>
+      <button class="btn bprimary" style="width:100%;margin-bottom:8px" onclick="window.open('${o.poFileUrl}','_blank');closePOSheet()">View / Print</button>
+      <button class="btn bghost" style="width:100%;margin-bottom:8px" onclick="closePOSheet();openPOUpload('${orderType}','${orderId}')">Replace</button>
+      <button class="btn bdanger2" style="width:100%;margin-bottom:8px" onclick="removePOFile('${orderType}','${orderId}')">Remove</button>
+      <button class="btn bghost" style="width:100%" onclick="closePOSheet()">Cancel</button>
+    </div>`;
+  document.body.appendChild(sheet);
+  sheet.onclick = e => { if(e.target===sheet) closePOSheet(); };
+}
+
+function closePOSheet(){
+  const s = document.getElementById('po-sheet');
+  if(s) s.remove();
+}
+
+async function handlePOFile(e){
+  const file = e.target.files[0];
+  if(!file || !_poUploadCtx) return;
+  const ctx = _poUploadCtx;
+  closePOSheet();
+
+  if(file.size > 10*1024*1024){
+    showToastErr('File too large — max 10MB');
+    return;
+  }
+
+  showToast('Uploading PO...');
+
+  try {
+    // Read as base64
+    const b64 = await new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result.split(',')[1]);
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+
+    const arr = ctx.orderType==='coldBrew' ? db.coldBrewOrders : db.greenRoastedOrders;
+    const i = arr.findIndex(x => x.id === ctx.orderId);
+    if(i < 0) throw new Error('Order not found');
+    const o = arr[i];
+
+    // If replacing, delete old file from Drive first
+    if(o.poFileId){
+      try { await apiCall('deletePO',{ fileId: o.poFileId }); } catch(err){}
+    }
+
+    const result = await apiCall('uploadPO', {
+      orderId: o.id,
+      orderType: ctx.orderType,
+      customerName: o.customerName,
+      fileName: file.name,
+      fileMime: file.type || 'application/octet-stream',
+      fileB64: b64
+    });
+
+    o.poFileId   = result.fileId;
+    o.poFileUrl  = result.fileUrl;
+    o.poFileName = result.fileName;
+    o.poFileMime = result.fileMime;
+
+    // Save back to Sheet
+    const action = ctx.orderType==='coldBrew' ? 'saveOrder' : 'saveGROrder';
+    const collection = ctx.orderType==='coldBrew' ? 'coldBrewOrders' : 'greenRoastedOrders';
+    saveRow(collection, action, o);
+
+    showToast('PO uploaded ✓');
+    if(ctx.orderType==='coldBrew') renderColdBrewOrders(); else renderGreenRoastedOrders();
+  } catch(err) {
+    showToastErr('Upload failed: ' + (err.message||'unknown'));
+  }
+  _poUploadCtx = null;
+}
+
+async function removePOFile(orderType, orderId){
+  closePOSheet();
+  const arr = orderType==='coldBrew' ? db.coldBrewOrders : db.greenRoastedOrders;
+  const i = arr.findIndex(x => x.id === orderId);
+  if(i < 0) return;
+  const o = arr[i];
+  showModal('Remove PO?', 'The file will be moved to Drive trash.', async () => {
+    try {
+      if(o.poFileId) await apiCall('deletePO', { fileId: o.poFileId });
+      o.poFileId = '';
+      o.poFileUrl = '';
+      o.poFileName = '';
+      o.poFileMime = '';
+      const action = orderType==='coldBrew' ? 'saveOrder' : 'saveGROrder';
+      const collection = orderType==='coldBrew' ? 'coldBrewOrders' : 'greenRoastedOrders';
+      saveRow(collection, action, o);
+      showToast('PO removed');
+      if(orderType==='coldBrew') renderColdBrewOrders(); else renderGreenRoastedOrders();
+    } catch(err) {
+      showToastErr('Could not remove PO');
+    }
+  });
+}
+
 async function sendPODEmail(order,photoDataUrl,sigDataUrl,receiverName){
   const url=getApiUrl();if(!url)return;
   const cust=db.coldBrewCustomers.find(c=>c.name===order.customerName||c.id===order.customerId);
@@ -1185,7 +1368,7 @@ function renderSettings(){
   const url=getApiUrl();const sc=url?'<span class="badge bok">Connected</span>':'<span class="badge bdanger">Not connected</span>';
   const varHtml=varietals.map((v,i)=>`<div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--bdr)"><input class="fi" id="var-${i}" type="text" value="${v.name}" style="flex:1;font-size:13px;padding:7px 10px"><button class="btn bsm bdanger2" onclick="delVarietal(${i})">×</button></div>`).join('');
   document.getElementById('page').innerHTML=`
-    <div class="card" style="background:rgba(25,51,48,0.04);border-color:var(--bdr)"><div style="display:flex;justify-content:space-between;align-items:center"><span style="font-size:12px;font-weight:700;color:var(--muted)">VERSION</span><span style="font-size:12px;font-weight:700;color:var(--leaf)">v1.7 · 20 Apr 2026</span></div></div>
+    <div class="card" style="background:rgba(25,51,48,0.04);border-color:var(--bdr)"><div style="display:flex;justify-content:space-between;align-items:center"><span style="font-size:12px;font-weight:700;color:var(--muted)">VERSION</span><span style="font-size:12px;font-weight:700;color:var(--leaf)">v1.9 · 20 Apr 2026</span></div></div>
     <div class="card"><div class="lbl">Database</div>
       <div class="srow"><div><div class="slbl">Google Sheets</div><div class="ssub2">${url?'Syncing':'Not connected'}</div></div>${sc}</div>
       ${!url?`<div class="fg" style="margin-top:12px"><label class="fl">Web App URL</label><input class="fi" id="s-url" type="url" placeholder="https://script.google.com/macros/s/..."><button class="btn bprimary bfull" onclick="saveUrl()" style="margin-top:8px">Connect</button></div>`:
