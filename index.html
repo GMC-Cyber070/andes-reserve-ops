@@ -138,7 +138,7 @@ code{background:rgba(25,51,48,0.07);padding:2px 6px;border-radius:4px;font-size:
     <path d="M8 16.5 Q11 14.8 14 15.5 Q17 14.8 20 16.5" stroke="#FBEBDF" stroke-width="1" fill="none" stroke-linecap="round"/>
     <path d="M8.5 19 Q11.2 17.5 14 18.2 Q16.8 17.5 19.5 19" stroke="#FBEBDF" stroke-width="1" fill="none" stroke-linecap="round"/>
   </svg>
-  <div><div class="hbrand">ANDES RESERVE</div><div class="hsub">OPS TRACKER · v1.9</div></div>
+  <div><div class="hbrand">ANDES RESERVE</div><div class="hsub">OPS TRACKER · v2.0</div></div>
   <div class="hright"><div class="hdate" id="hdr-date"></div><span class="sdot" id="sdot" style="display:none"></span></div>
 </div>
 <div class="tabs">
@@ -326,8 +326,21 @@ const varOpts=(selected='')=>varietals.map(v=>`<option value="${v.id}"${v.id===s
 
 function fridgeStock(){
   let b10=0,u15=0;
-  (db.fridgeMoves||[]).forEach(m=>{const s=m.type==='in'?1:-1;b10+=s*(Number(m.boxes10L)||0);u15+=s*(Number(m.units15L)||0);});
-  return{boxes10L:Math.max(0,b10),units15L:Math.max(0,u15)};
+  (db.fridgeMoves||[]).forEach(m=>{
+    // 'in' and 'reconcile' add as-is (reconcile stores signed delta); everything else subtracts
+    const s=(m.type==='in'||m.type==='reconcile')?1:-1;
+    b10+=s*(Number(m.boxes10L)||0);
+    u15+=s*(Number(m.units15L)||0);
+  });
+  // No Math.max clamp — negative values surface drift so it can be reconciled
+  return{boxes10L:b10,units15L:u15};
+}
+// Sum expected yield from brews that are still in progress (not yet 'done')
+function fridgeIncoming(){
+  let b10=0,u15=0;
+  const pending=(db.brews||[]).filter(b=>b.status!=='done');
+  pending.forEach(b=>{b10+=Number(b.actual10L)||0;u15+=Number(b.actual15L)||0;});
+  return{boxes10L:b10,units15L:u15,batches:pending.length};
 }
 
 function totalCavKg(){
@@ -401,6 +414,8 @@ function renderToday(){
   const twGR=db.greenRoastedOrders.filter(o=>wStart(o.date)===tw&&o.status!=='fulfilled');
   const twFulf=db.coldBrewOrders.filter(o=>wStart(o.date)===tw&&o.status==='fulfilled').length+db.greenRoastedOrders.filter(o=>wStart(o.date)===tw&&o.status==='fulfilled').length;
   const c10=twCB.reduce((a,o)=>a+(Number(o.boxes10L)||0),0),c15=twCB.reduce((a,o)=>a+(Number(o.units15L)||0),0),cs=slots(c10,c15),rs=fs-cs;
+  const inc=fridgeIncoming();
+  const net10=stk.boxes10L+inc.boxes10L-c10, net15=stk.units15L+inc.units15L-c15;
   const nt=nextThu(),nd=dUntil(nt);
   const ip=db.coldBrewOrders.filter(o=>(o.city==='Sydney'||o.city==='Melbourne')&&o.status!=='fulfilled');
   const wkRevCB=db.coldBrewOrders.filter(o=>wStart(o.date)===tw&&o.status==='fulfilled').reduce((a,o)=>a+cbOrderRev(o).inc,0);
@@ -421,9 +436,15 @@ function renderToday(){
   document.getElementById('page').innerHTML=`
     <div class="card-dark">
       <div class="lbl-c">Fridge — cold brew</div>
-      <div style="display:flex;align-items:baseline;gap:4px"><span class="fnum">${fs}</span><span style="font-size:14px;color:rgba(251,235,223,0.5);margin-left:4px">/ ${cap} slots</span><span style="margin-left:auto;font-size:12px;color:rgba(251,235,223,0.4)">${cap-fs} free</span></div>
-      <div class="ftrack"><div class="ffill ${fc}" style="width:${pct}%"></div></div>
-      <div class="frow"><span>${stk.boxes10L}×10L</span><span>${stk.units15L}×1.5L</span><span style="color:${rs<0?'#E24B4A':'rgba(251,235,223,0.4)'}">After orders: ${rs}</span></div>
+      <div style="display:flex;align-items:baseline;gap:4px"><span class="fnum" style="color:${fs<0?'#E24B4A':'var(--cream)'}">${fs}</span><span style="font-size:14px;color:rgba(251,235,223,0.5);margin-left:4px">/ ${cap} slots</span><span style="margin-left:auto;font-size:12px;color:rgba(251,235,223,0.4)">${cap-Math.max(0,fs)} free</span></div>
+      <div class="ftrack"><div class="ffill ${fc}" style="width:${Math.max(0,pct)}%"></div></div>
+      ${fs<0?`<div style="font-size:11px;color:#E24B4A;margin:6px 0 2px;font-weight:600">Ledger negative — reconcile via Supply → Fridge → Set to</div>`:''}
+      <div style="border-top:1px solid rgba(251,235,223,0.08);margin-top:10px;padding-top:10px">
+        <div style="display:flex;justify-content:space-between;font-size:13px;padding:3px 0"><span style="color:rgba(251,235,223,0.6)">In fridge</span><span style="font-weight:600;color:${stk.boxes10L<0||stk.units15L<0?'#E24B4A':'var(--cream)'}">${stk.boxes10L}×10L · ${stk.units15L}×1.5L</span></div>
+        <div style="display:flex;justify-content:space-between;font-size:13px;padding:3px 0"><span style="color:rgba(251,235,223,0.6)">+ Brewing${inc.batches?` (${inc.batches})`:''}</span><span style="font-weight:600;color:${inc.batches?'#7FB99A':'rgba(251,235,223,0.4)'}">${inc.batches?`+${inc.boxes10L}×10L · +${inc.units15L}×1.5L`:'—'}</span></div>
+        <div style="display:flex;justify-content:space-between;font-size:13px;padding:3px 0"><span style="color:rgba(251,235,223,0.6)">– Week orders${twCB.length?` (${twCB.length})`:''}</span><span style="font-weight:600;color:${c10||c15?'var(--cream)':'rgba(251,235,223,0.4)'}">${c10||c15?`−${c10}×10L · −${c15}×1.5L`:'—'}</span></div>
+        <div style="display:flex;justify-content:space-between;font-size:13px;padding:6px 0 2px;border-top:1px solid rgba(251,235,223,0.08);margin-top:6px"><span style="color:rgba(251,235,223,0.8);font-weight:600">= Headroom</span><span style="font-weight:700;color:${net10<0||net15<0?'#E24B4A':'#7FB99A'}">${net10}×10L · ${net15}×1.5L ${net10<0||net15<0?'⚠':'✓'}</span></div>
+      </div>
     </div>
     <div class="metrics">
       <div class="metric ${totalCavBags<3?'warn':''}"><div class="mlbl">Cavaliers total</div><div class="mval">${totalCavBags}<span style="font-size:14px;font-weight:400"> bags</span></div><div class="msub2">${totalCavKg().toLocaleString()} kg</div></div>
@@ -721,13 +742,15 @@ function renderSupply(){
     document.getElementById('page').innerHTML=`
       ${subTabs}
       <div class="card"><div class="lbl">Fridge adjustment</div>
-        <div style="display:flex;gap:8px;margin-bottom:12px">
+        <div style="display:flex;gap:6px;margin-bottom:12px">
           <button id="fadj-in" onclick="setFridgeAdjType('in')" style="flex:1;border:1.5px solid var(--bdr2);border-radius:var(--r);padding:9px;font-size:12px;font-weight:700;cursor:pointer;font-family:'Figtree',sans-serif;background:var(--leaf);color:var(--cream)">Stock in</button>
           <button id="fadj-out" onclick="setFridgeAdjType('out')" style="flex:1;border:1.5px solid var(--bdr2);border-radius:var(--r);padding:9px;font-size:12px;font-weight:700;cursor:pointer;font-family:'Figtree',sans-serif;background:transparent;color:var(--dim)">Stock out</button>
+          <button id="fadj-set" onclick="setFridgeAdjType('set')" style="flex:1;border:1.5px solid var(--bdr2);border-radius:var(--r);padding:9px;font-size:12px;font-weight:700;cursor:pointer;font-family:'Figtree',sans-serif;background:transparent;color:var(--dim)">Set to</button>
         </div>
-        <div class="fr"><div class="fg"><label class="fl">10L boxes</label><input class="fi" id="fadj-10L" type="number" min="0" placeholder="0"></div><div class="fg"><label class="fl">1.5L units</label><input class="fi" id="fadj-15L" type="number" min="0" placeholder="0"></div></div>
+        <div id="fadj-hint" style="display:none;font-size:11px;color:var(--muted);margin-bottom:10px;padding:8px 10px;background:rgba(25,51,48,0.04);border-radius:6px;line-height:1.4"></div>
+        <div class="fr"><div class="fg"><label class="fl" id="fadj-10L-lbl">10L boxes</label><input class="fi" id="fadj-10L" type="number" min="0" placeholder="0"></div><div class="fg"><label class="fl" id="fadj-15L-lbl">1.5L units</label><input class="fi" id="fadj-15L" type="number" min="0" placeholder="0"></div></div>
         <div class="fg"><label class="fl">Reason / notes</label><input class="fi" id="fadj-notes" type="text" placeholder="e.g. existing stock, write-off"></div>
-        <button class="btn bprimary bfull" onclick="addFridgeAdj()">Update fridge</button>
+        <button class="btn bprimary bfull" id="fadj-btn" onclick="addFridgeAdj()">Update fridge</button>
       </div>
       <div class="card"><div class="lbl">Schedule a roast</div>
         <div class="fr"><div class="fg"><label class="fl">Varietal</label><select class="fi" id="r-var">${varOpts('cauca')}</select></div><div class="fg"><label class="fl">Roasted kg needed</label><input class="fi" id="r-kg" type="number" step="0.1" min="0.1" placeholder="0" oninput="rEst()"></div></div>
@@ -824,20 +847,45 @@ function delBrew(id){showModal('Delete brew batch?','',()=>{delRow('brews','dele
 let fridgeAdjType='in';
 function setFridgeAdjType(t){
   fridgeAdjType=t;
-  const inBtn=document.getElementById('fadj-in'),outBtn=document.getElementById('fadj-out');
-  if(inBtn&&outBtn){
-    inBtn.style.background=t==='in'?'var(--leaf)':'transparent';
-    inBtn.style.color=t==='in'?'var(--cream)':'var(--dim)';
-    outBtn.style.background=t==='out'?'var(--leaf)':'transparent';
-    outBtn.style.color=t==='out'?'var(--cream)':'var(--dim)';
+  const inBtn=document.getElementById('fadj-in'),outBtn=document.getElementById('fadj-out'),setBtn=document.getElementById('fadj-set');
+  const hint=document.getElementById('fadj-hint'),lbl10=document.getElementById('fadj-10L-lbl'),lbl15=document.getElementById('fadj-15L-lbl'),btn=document.getElementById('fadj-btn');
+  if(inBtn){inBtn.style.background=t==='in'?'var(--leaf)':'transparent';inBtn.style.color=t==='in'?'var(--cream)':'var(--dim)';}
+  if(outBtn){outBtn.style.background=t==='out'?'var(--leaf)':'transparent';outBtn.style.color=t==='out'?'var(--cream)':'var(--dim)';}
+  if(setBtn){setBtn.style.background=t==='set'?'var(--leaf)':'transparent';setBtn.style.color=t==='set'?'var(--cream)':'var(--dim)';}
+  const stk=fridgeStock();
+  if(t==='set'){
+    if(hint){hint.style.display='block';hint.innerHTML=`Enter what's <strong>physically in the fridge right now</strong>. Currently tracked: <strong>${stk.boxes10L}×10L · ${stk.units15L}×1.5L</strong>. The difference will be logged as a reconcile move.`;}
+    if(lbl10)lbl10.textContent='10L physical count';
+    if(lbl15)lbl15.textContent='1.5L physical count';
+    if(btn)btn.textContent='Reconcile fridge';
+  }else{
+    if(hint)hint.style.display='none';
+    if(lbl10)lbl10.textContent='10L boxes';
+    if(lbl15)lbl15.textContent='1.5L units';
+    if(btn)btn.textContent='Update fridge';
   }
 }
 function addFridgeAdj(){
   const b10=parseInt(document.getElementById('fadj-10L').value)||0;
   const b15=parseInt(document.getElementById('fadj-15L').value)||0;
   const notes=document.getElementById('fadj-notes').value.trim();
+  const now=new Date().toISOString();
+  if(fridgeAdjType==='set'){
+    const cur=fridgeStock();
+    const d10=b10-cur.boxes10L, d15=b15-cur.units15L;
+    if(d10===0&&d15===0){showToastErr('Already matches — no change needed');return;}
+    const mv={id:uid(),date:T(),type:'reconcile',boxes10L:d10,units15L:d15,slots:slots(Math.abs(d10),Math.abs(d15)),notes:notes||`Physical count: ${b10}×10L · ${b15}×1.5L`,source:'manual',createdAt:now};
+    db.fridgeMoves.push(mv);
+    document.getElementById('fadj-10L').value='';
+    document.getElementById('fadj-15L').value='';
+    document.getElementById('fadj-notes').value='';
+    saveRow('fridgeMoves','saveFridgeMove',mv);
+    renderSupply();
+    showToast(`Fridge reconciled to ${b10}×10L · ${b15}×1.5L (Δ ${d10>=0?'+':''}${d10}×10L · ${d15>=0?'+':''}${d15}×1.5L)`);
+    return;
+  }
   if(!b10&&!b15){showToastErr('Enter at least one quantity');return;}
-  const mv={id:uid(),date:T(),type:fridgeAdjType==='in'?'in':'out-manual',boxes10L:b10,units15L:b15,slots:slots(b10,b15),notes:notes||'Manual adjustment',source:'manual',createdAt:new Date().toISOString()};
+  const mv={id:uid(),date:T(),type:fridgeAdjType==='in'?'in':'out-manual',boxes10L:b10,units15L:b15,slots:slots(b10,b15),notes:notes||'Manual adjustment',source:'manual',createdAt:now};
   db.fridgeMoves.push(mv);
   document.getElementById('fadj-10L').value='';
   document.getElementById('fadj-15L').value='';
@@ -1368,7 +1416,7 @@ function renderSettings(){
   const url=getApiUrl();const sc=url?'<span class="badge bok">Connected</span>':'<span class="badge bdanger">Not connected</span>';
   const varHtml=varietals.map((v,i)=>`<div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--bdr)"><input class="fi" id="var-${i}" type="text" value="${v.name}" style="flex:1;font-size:13px;padding:7px 10px"><button class="btn bsm bdanger2" onclick="delVarietal(${i})">×</button></div>`).join('');
   document.getElementById('page').innerHTML=`
-    <div class="card" style="background:rgba(25,51,48,0.04);border-color:var(--bdr)"><div style="display:flex;justify-content:space-between;align-items:center"><span style="font-size:12px;font-weight:700;color:var(--muted)">VERSION</span><span style="font-size:12px;font-weight:700;color:var(--leaf)">v1.9 · 20 Apr 2026</span></div></div>
+    <div class="card" style="background:rgba(25,51,48,0.04);border-color:var(--bdr)"><div style="display:flex;justify-content:space-between;align-items:center"><span style="font-size:12px;font-weight:700;color:var(--muted)">VERSION</span><span style="font-size:12px;font-weight:700;color:var(--leaf)">v2.0 · 17 Aug 2026</span></div></div>
     <div class="card"><div class="lbl">Database</div>
       <div class="srow"><div><div class="slbl">Google Sheets</div><div class="ssub2">${url?'Syncing':'Not connected'}</div></div>${sc}</div>
       ${!url?`<div class="fg" style="margin-top:12px"><label class="fl">Web App URL</label><input class="fi" id="s-url" type="url" placeholder="https://script.google.com/macros/s/..."><button class="btn bprimary bfull" onclick="saveUrl()" style="margin-top:8px">Connect</button></div>`:
