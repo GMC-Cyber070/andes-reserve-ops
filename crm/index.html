@@ -1,0 +1,499 @@
+<title>Andes Reserve Pipeline</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;800&display=swap">
+<style>
+/* Layout: brand header + stat strip, filter row, lead list; lead detail opens as a sheet over the list */
+:root{
+  --leaf:#193330; --cream:#FBEBDF; --mint:#E1EAE5;
+  --bg:#FBEBDF; --surface:#FFFFFF; --surface2:#F6E3D5; --fg:#193330; --muted:rgba(25,51,48,.58); --line:rgba(25,51,48,.12);
+  --head-bg:#193330; --head-fg:#FBEBDF; --accent:#193330; --accent-fg:#FBEBDF;
+  --ok-bg:#E3F1E8; --ok:#1a5c35; --warn-bg:#FFF0DC; --warn:#8B4A00; --bad-bg:#FBE7E7; --bad:#8B1A1A; --info-bg:#E1EAE5; --hot-bg:#EEEDFE; --hot:#3C3489;
+  --font:'Figtree',system-ui,-apple-system,'Segoe UI',sans-serif;
+  --r:12px;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0F2220; --surface:#17302D; --surface2:#1D3936; --fg:#FBEBDF; --muted:rgba(251,235,223,.6); --line:rgba(251,235,223,.13);
+  --head-bg:#0A1917; --head-fg:#FBEBDF; --accent:#FBEBDF; --accent-fg:#193330;
+  --ok-bg:#16402B; --ok:#9BE0B4; --warn-bg:#4A3010; --warn:#F5C27A; --bad-bg:#4A1A1A; --bad:#F4A3A3; --info-bg:#24423E; --hot-bg:#2C2A55; --hot:#C9C5FF;
+  color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0F2220; --surface:#17302D; --surface2:#1D3936; --fg:#FBEBDF; --muted:rgba(251,235,223,.6); --line:rgba(251,235,223,.13);
+  --head-bg:#0A1917; --head-fg:#FBEBDF; --accent:#FBEBDF; --accent-fg:#193330;
+  --ok-bg:#16402B; --ok:#9BE0B4; --warn-bg:#4A3010; --warn:#F5C27A; --bad-bg:#4A1A1A; --bad:#F4A3A3; --info-bg:#24423E; --hot-bg:#2C2A55; --hot:#C9C5FF;
+  color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--font);font-size:14px;line-height:1.45}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.wrap{max-width:1100px;margin:0 auto;padding-inline:16px}
+
+header.top{background:var(--head-bg);color:var(--head-fg)}
+header.top .wrap{display:flex;align-items:center;gap:12px;padding-block:14px;flex-wrap:wrap}
+.brand{font-weight:800;letter-spacing:.1em;font-size:15px}
+.brand small{display:block;font-size:9px;letter-spacing:.24em;opacity:.6;font-weight:600;margin-top:2px}
+.me{margin-left:auto;display:flex;align-items:center;gap:6px;font-size:12px;opacity:.9}
+.seg{display:inline-flex;border:1px solid rgba(251,235,223,.3);border-radius:999px;overflow:hidden}
+.seg button{background:none;border:0;padding:5px 12px;font-size:12px;font-weight:700;color:var(--head-fg);opacity:.6}
+.seg button[aria-pressed="true"]{background:var(--head-fg);color:var(--head-bg);opacity:1}
+
+.stats{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px;padding-block:16px 4px}
+.stat{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:10px 12px;text-align:left;border-width:1px}
+.stat b{display:block;font-size:24px;font-weight:800;line-height:1.1;font-variant-numeric:tabular-nums}
+.stat span{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--muted)}
+.stat.alert b{color:var(--bad)}
+.stat[aria-pressed="true"]{outline:2px solid var(--accent)}
+@media (max-width:640px){.stats{grid-template-columns:repeat(3,minmax(0,1fr))}.stat:nth-child(n+4){display:none}}
+
+.controls{display:flex;gap:8px;flex-wrap:wrap;align-items:center;padding-block:12px}
+.chips{display:flex;gap:6px;overflow-x:auto;padding-bottom:2px;flex:1 1 100%;scrollbar-width:none}
+.chip{border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:6px 12px;font-size:12px;font-weight:700;white-space:nowrap}
+.chip[aria-pressed="true"]{background:var(--accent);color:var(--accent-fg);border-color:var(--accent)}
+.controls input[type=search],.controls select{border:1px solid var(--line);background:var(--surface);border-radius:10px;padding:8px 10px;min-width:0}
+.controls input[type=search]{flex:1 1 180px}
+.btn{border:1px solid var(--line);background:var(--surface);border-radius:10px;padding:8px 14px;font-weight:700;font-size:13px}
+.btn.primary{background:var(--accent);color:var(--accent-fg);border-color:var(--accent)}
+.btn.small{padding:5px 10px;font-size:12px}
+.btn:disabled{opacity:.5;cursor:default}
+
+.list{display:grid;gap:8px;padding-bottom:48px}
+.lead{display:grid;grid-template-columns:1fr auto;gap:4px 12px;background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:12px 14px;text-align:left;width:100%}
+.lead:hover{border-color:var(--muted)}
+.lead .nm{font-weight:800;font-size:15px;min-width:0}
+.lead .meta{grid-column:1;color:var(--muted);font-size:12px;min-width:0}
+.lead .right{grid-row:1/span 2;grid-column:2;display:flex;flex-direction:column;align-items:flex-end;gap:4px}
+.lead .why{grid-column:1/-1;font-size:12.5px;color:var(--muted);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.pill{display:inline-flex;align-items:center;gap:4px;font-size:10.5px;font-weight:700;padding:3px 8px;border-radius:999px;white-space:nowrap;background:var(--info-bg);color:var(--fg)}
+.p-new{background:var(--surface2)} .p-seq{background:var(--info-bg)} .p-hot{background:var(--hot-bg);color:var(--hot)}
+.p-won{background:var(--ok-bg);color:var(--ok)} .p-closed{background:var(--surface2);color:var(--muted)}
+.p-find{background:var(--warn-bg);color:var(--warn)} .p-due{background:var(--bad-bg);color:var(--bad)}
+.prio{font-size:10px;font-weight:800;letter-spacing:.06em;color:var(--muted)}
+.empty{padding:40px 16px;text-align:center;color:var(--muted);background:var(--surface);border:1px dashed var(--line);border-radius:var(--r)}
+
+/* sheet */
+.scrim{position:fixed;inset:0;background:rgba(10,25,23,.45);z-index:20;display:flex;justify-content:flex-end}
+.sheet{background:var(--bg);width:min(620px,100%);height:100%;overflow-y:auto;padding:0 0 calc(40px + env(safe-area-inset-bottom,0px))}
+.sheet-h{position:sticky;top:0;background:var(--head-bg);color:var(--head-fg);padding:calc(14px + env(safe-area-inset-top,0px)) 16px 14px;display:flex;align-items:flex-start;gap:10px;z-index:1}
+.sheet-h h2{margin:0;font-size:18px;font-weight:800;text-wrap:balance;min-width:0;flex:1}
+.sheet-h .x{background:none;border:1px solid rgba(251,235,223,.3);color:var(--head-fg);border-radius:8px;padding:4px 10px;font-weight:700}
+.sec{padding:14px 16px;border-bottom:1px solid var(--line);display:grid;gap:10px}
+.sec h3{margin:0;font-size:10.5px;font-weight:800;text-transform:uppercase;letter-spacing:.1em;color:var(--muted)}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+@media (max-width:520px){.grid2{grid-template-columns:1fr}}
+label.f{display:grid;gap:4px;font-size:11px;font-weight:700;color:var(--muted);min-width:0}
+label.f input,label.f select,label.f textarea{border:1px solid var(--line);background:var(--surface);border-radius:9px;padding:8px 10px;font-size:14px;font-weight:500;color:var(--fg);width:100%;min-width:0}
+label.f textarea{resize:vertical;min-height:64px}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.next{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:12px;display:grid;gap:8px}
+.next .lbl{font-weight:800}
+.mail{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:12px;white-space:pre-wrap;font-size:13.5px;line-height:1.55;overflow-wrap:anywhere}
+.mail .subj{font-weight:800;display:block;margin-bottom:8px}
+.warnbox{background:var(--warn-bg);color:var(--warn);border-radius:10px;padding:8px 10px;font-size:12.5px;font-weight:600}
+.log{display:grid;gap:6px;font-size:13px}
+.log div{display:grid;grid-template-columns:auto 1fr;gap:8px}
+.log time{color:var(--muted);font-size:11.5px;font-variant-numeric:tabular-nums;white-space:nowrap;padding-top:1px}
+.toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--head-bg);color:var(--head-fg);padding:10px 16px;border-radius:10px;font-weight:600;z-index:40;max-width:calc(100% - 32px)}
+.banner{background:var(--warn-bg);color:var(--warn);padding:10px 16px;font-weight:600;font-size:13px}
+.muted{color:var(--muted)}
+a{color:inherit}
+@media (prefers-reduced-motion:no-preference){.sheet{animation:sl .18s ease}@keyframes sl{from{transform:translateX(24px);opacity:.6}to{transform:none;opacity:1}}}
+</style>
+
+<header class="top"><div class="wrap">
+  <div class="brand">ANDES RESERVE<small>• OUTREACH PIPELINE •</small></div>
+  <div class="me">I'm
+    <div class="seg" role="group" aria-label="Who is using this">
+      <button type="button" data-me="Cristian">Cristian</button><button type="button" data-me="Taaj">Taaj</button>
+    </div>
+  </div>
+</div></header>
+<div id="banner" class="banner" hidden></div>
+
+<main class="wrap">
+  <section class="stats" id="stats" aria-label="Summary"></section>
+  <section class="controls">
+    <div class="chips" id="chips" role="group" aria-label="Filter"></div>
+    <input type="search" id="q" placeholder="Search name, venue, contact…" aria-label="Search">
+    <select id="city" aria-label="City"><option value="">All cities</option></select>
+    <select id="sort" aria-label="Sort"><option value="next">Sort: next action</option><option value="prio">Sort: priority</option><option value="name">Sort: name</option></select>
+    <button class="btn primary" id="add" type="button">+ Add lead</button>
+    <button class="btn" id="settingsBtn" type="button">Settings</button>
+  </section>
+  <section class="list" id="list" aria-live="polite">
+    <div class="empty">Loading leads…</div>
+  </section>
+</main>
+<div id="sheetRoot"></div>
+<div id="toast" class="toast" hidden></div>
+
+<script>
+// ---------- constants ----------
+const STAGES = [
+  ['new','Researched','p-new'],
+  ['e1','Email 1 sent','p-seq'],
+  ['e2','Follow-up 1 sent','p-seq'],
+  ['e3','Follow-up 2 sent','p-seq'],
+  ['e4','Final email sent','p-seq'],
+  ['replied','Replied','p-hot'],
+  ['sample','Sample drop booked','p-hot'],
+  ['tasted','Sample dropped','p-hot'],
+  ['proposal','Pricing sent','p-hot'],
+  ['won','Won','p-won'],
+  ['paused','Not now','p-closed'],
+  ['lost','Lost','p-closed'],
+  ['dnc','Do not contact','p-closed'],
+];
+const STAGE = Object.fromEntries(STAGES.map(([k,l,c])=>[k,{label:l,cls:c}]));
+const SEQ = {new:{to:'e1',days:4,step:1},e1:{to:'e2',days:5,step:2},e2:{to:'e3',days:7,step:3},e3:{to:'e4',days:0,step:4}};
+const KINDS = ['Hospitality group','Hotel group','Hotel','Café group','Pub group','Caterer / venue','Other'];
+const CONTACT = {find:'Taaj to find',generic:'Generic inbox only',found:'Contact found'};
+const FILTERS = [
+  ['all','All'],['due','Due'],['find','Find contact'],['ready','Ready to email'],['seq','In sequence'],['hot','Hot'],['won','Won'],['closed','Closed']
+];
+const HOT = ['replied','sample','tasted','proposal'];
+const SEQS = ['e1','e2','e3','e4'];
+const CLOSED = ['paused','lost','dnc'];
+
+// ---------- state ----------
+let db=null, leads=[], loaded=false, filter='all', openId=null, settings={sydneyDates:''};
+const ls = {get(k,d){try{const v=localStorage.getItem(k);return v==null?d:v}catch(e){return d}}, set(k,v){try{localStorage.setItem(k,v)}catch(e){}}};
+let me = ls.get('arp_me','Cristian');
+try{filter=ls.get('arp_filter','all')}catch(e){}
+
+// ---------- utils ----------
+const $=s=>document.querySelector(s);
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const today=()=>{const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')};
+const addDays=(n)=>{const d=new Date();d.setDate(d.getDate()+n);return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')};
+const fmtDate=s=>{if(!s)return '';const d=new Date(s.length<=10?s+'T00:00':s);return d.toLocaleDateString('en-AU',{day:'numeric',month:'short'})};
+const firstName=n=>(n||'').trim().split(/\s+/)[0]||'there';
+function toast(msg){const t=$('#toast');t.textContent=msg;t.hidden=false;clearTimeout(toast._t);toast._t=setTimeout(()=>t.hidden=true,2600)}
+function isDue(l){return l.nextDate && l.nextDate<=today() && !CLOSED.includes(l.stage) && l.stage!=='won'}
+function needsContact(l){return (l.contactStatus||'find')!=='found' && !CLOSED.includes(l.stage) && l.stage!=='won'}
+function matches(l,f){
+  switch(f){
+    case 'due':return isDue(l);
+    case 'find':return needsContact(l);
+    case 'ready':return l.stage==='new' && (l.contactStatus==='found'||l.contactStatus==='generic') && !!l.email;
+    case 'seq':return SEQS.includes(l.stage);
+    case 'hot':return HOT.includes(l.stage);
+    case 'won':return l.stage==='won';
+    case 'closed':return CLOSED.includes(l.stage);
+    default:return true;
+  }
+}
+
+// ---------- email templates ----------
+function isHotel(l){return /hotel/i.test(l.kind||'')}
+function useLine(l){
+  return isHotel(l)
+    ? 'Hotels use it across breakfast iced coffee, the lobby bar and espresso martinis, with no barista or espresso machine needed.'
+    : 'Venues use it mostly for espresso martinis and iced coffee. It pours straight from a box with a tap, so there\'s no extraction or cooling time in the middle of service.';
+}
+function sampleAsk(l){
+  const syd = /sydney/i.test(l.city||'') && !/brisbane/i.test(l.city||'');
+  if(syd) return settings.sydneyDates
+    ? `I'm in Sydney ${settings.sydneyDates} dropping samples to a few venues. Worth me leaving a 1.5L box with your team?`
+    : `I'm down in Sydney soon dropping samples to a few venues. Worth me leaving a 1.5L box with your team?`;
+  return 'Would it be worth me dropping off a 1.5L sample for your team to try?';
+}
+function emailFor(l, step){
+  const fn=firstName(l.contactName), grp=l.name||'your venues';
+  const sig='Cristian Campo\nDirector, Andes Reserve\n0426 264 645';
+  if(step===1){
+    const pl=(l.personalLine||'').trim();
+    return {subject:`cold brew for ${grp}`, body:
+`Hi ${fn},
+
+${pl?pl+'\n\n':''}I'm Cristian, director of Andes Reserve. We grow our own coffee on our farms in Colombia, roast and brew it here in Brisbane, and turn it into a cold brew concentrate. Just specialty coffee and triple-filtered water, no preservatives.
+
+We already supply Howard Smith Wharves and Anyday. ${useLine(l)} The crema holds for at least two hours.
+
+${sampleAsk(l)}
+
+Cheers,
+${sig}`};
+  }
+  if(step===2) return {subject:`Re: cold brew for ${grp}`, body:
+`Hi ${fn},
+
+Just bumping this up. If someone else looks after the bar or coffee side at ${grp}, happy to drop the sample with them instead. And if it's not a fit, just say and I won't chase.
+
+Cheers,
+Cristian`};
+  if(step===3) return {subject:`Re: cold brew for ${grp}`, body:
+`Hi ${fn},
+
+One practical thing: because it's a concentrate in a box with a tap, your team pours, mixes and serves. No pulling shots and waiting for them to cool during a rush, and the espresso martini crema lasts at least two hours.
+
+Still happy to drop a 1.5L sample in, whatever day suits.
+
+Cristian`};
+  if(step===4) return {subject:`Re: cold brew for ${grp}`, body:
+`Hi ${fn},
+
+I'll leave it here. If cold brew ever comes up for the menu at ${grp}, I'm on 0426 264 645.
+
+Cheers,
+Cristian`};
+  return null;
+}
+
+// ---------- rendering ----------
+function renderMe(){document.querySelectorAll('[data-me]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.me===me)))}
+function renderStats(){
+  const c={due:0,find:0,seq:0,hot:0,won:0};
+  leads.forEach(l=>{if(isDue(l))c.due++;if(needsContact(l))c.find++;if(SEQS.includes(l.stage))c.seq++;if(HOT.includes(l.stage))c.hot++;if(l.stage==='won')c.won++});
+  const items=[['due','Due today',c.due,c.due>0],['find','Taaj to find',c.find],['seq','In sequence',c.seq],['hot','Replied / sampling',c.hot],['won','Won',c.won]];
+  $('#stats').innerHTML=items.map(([k,l,n,a])=>`<button type="button" class="stat${a?' alert':''}" data-f="${k}" aria-pressed="${filter===k}"><b>${loaded?n:'–'}</b><span>${l}</span></button>`).join('');
+}
+function renderChips(){
+  $('#chips').innerHTML=FILTERS.map(([k,l])=>{const n=leads.filter(x=>matches(x,k)).length;return `<button type="button" class="chip" data-f="${k}" aria-pressed="${filter===k}">${l}${loaded?' · '+n:''}</button>`}).join('');
+}
+function renderCities(){
+  const sel=$('#city'),cur=sel.value;
+  const cities=[...new Set(leads.flatMap(l=>(l.city||'').split(/\s*\+\s*/)).filter(Boolean))].sort();
+  sel.innerHTML='<option value="">All cities</option>'+cities.map(c=>`<option ${c===cur?'selected':''}>${esc(c)}</option>`).join('');
+}
+function renderList(){
+  const el=$('#list');
+  if(!loaded){return}
+  const q=$('#q').value.trim().toLowerCase(), city=$('#city').value, sort=$('#sort').value;
+  let rows=leads.filter(l=>matches(l,filter))
+    .filter(l=>!city||(l.city||'').includes(city))
+    .filter(l=>!q||[l.name,l.venues,l.contactName,l.contactRole,l.email,l.why].join(' ').toLowerCase().includes(q));
+  rows.sort((a,b)=>{
+    if(sort==='name')return (a.name||'').localeCompare(b.name||'');
+    if(sort==='prio')return (a.priority||9)-(b.priority||9)||(a.name||'').localeCompare(b.name||'');
+    return (a.nextDate||'9999').localeCompare(b.nextDate||'9999')||(a.priority||9)-(b.priority||9);
+  });
+  if(!leads.length){el.innerHTML='<div class="empty">No leads yet. Tap <b>+ Add lead</b> to add the first one, or ask Claude to load a researched batch.</div>';return}
+  if(!rows.length){el.innerHTML='<div class="empty">Nothing matches this filter.</div>';return}
+  el.innerHTML=rows.map(l=>{
+    const st=STAGE[l.stage]||STAGE.new, cs=l.contactStatus||'find';
+    const due=isDue(l);
+    return `<button type="button" class="lead" data-id="${esc(l._id)}">
+      <span class="nm">${esc(l.name)}</span>
+      <span class="right"><span class="pill ${st.cls}">${st.label}</span>
+        ${l.nextDate&&!CLOSED.includes(l.stage)&&l.stage!=='won'?`<span class="pill ${due?'p-due':'p-new'}">${due?'Due ':'Next '}${fmtDate(l.nextDate)}</span>`:''}
+      </span>
+      <span class="meta"><span class="prio">P${esc(l.priority||'–')}</span> · ${esc(l.kind||'')} · ${esc(l.city||'')}${l.contactName?' · '+esc(l.contactName):''}
+        ${cs!=='found'?` <span class="pill p-find">${CONTACT[cs]}</span>`:''}${l.assignee?` · ${esc(l.assignee)}`:''}</span>
+      ${l.why?`<span class="why">${esc(l.why)}</span>`:''}
+    </button>`}).join('');
+}
+function renderAll(){renderMe();renderStats();renderChips();renderCities();renderList();refreshOpen()}
+
+// ---------- detail sheet ----------
+function field(id,label,val,type='text',extra=''){return `<label class="f">${label}<input id="${id}" type="${type}" value="${esc(val)}" ${extra}></label>`}
+function sel(id,label,opts,val){return `<label class="f">${label}<select id="${id}">${opts.map(([v,l])=>`<option value="${esc(v)}" ${v===val?'selected':''}>${esc(l)}</option>`).join('')}</select></label>`}
+function ta(id,label,val){return `<label class="f">${label}<textarea id="${id}">${esc(val)}</textarea></label>`}
+
+function renderSheet(){
+  const root=$('#sheetRoot');
+  if(!openId){root.innerHTML='';return}
+  const isNew=openId==='__new__';
+  const l=isNew?{name:'',kind:'Hospitality group',city:'Brisbane',priority:2,stage:'new',contactStatus:'find',log:[]}:leads.find(x=>x._id===openId);
+  if(!l){openId=null;root.innerHTML='';return}
+  root.dataset.for=openId;
+  root.innerHTML=`<div class="scrim" id="scrim"><div class="sheet" role="dialog" aria-modal="true" aria-label="${esc(l.name||'New lead')}">
+    <div class="sheet-h"><h2>${isNew?'New lead':esc(l.name)}</h2><button class="x" type="button" id="close">Close</button></div>
+    ${isNew?'':`<div class="sec" id="dyn"></div>`}
+    <div class="sec"><h3>Organisation</h3>
+      ${field('f_name','Name',l.name)}
+      <div class="grid2">${sel('f_kind','Type',KINDS.map(k=>[k,k]),l.kind)}${field('f_city','City (e.g. Brisbane, Sydney, Brisbane + Sydney)',l.city)}</div>
+      <div class="grid2">${field('f_venues','Venues',l.venues)}${field('f_website','Website',l.website,'url')}</div>
+      <div class="grid2">${sel('f_priority','Priority',[[1,'P1: go first'],[2,'P2'],[3,'P3: later']].map(([a,b])=>[String(a),b]),String(l.priority||2))}${sel('f_assignee','Owner',[['',''],['Cristian','Cristian'],['Taaj','Taaj']],l.assignee||'')}</div>
+      ${ta('f_why','Why them / angle',l.why)}
+      ${ta('f_personal','Personal first line for email 1 (must be true)',l.personalLine)}
+    </div>
+    <div class="sec"><h3>Contact</h3>
+      ${sel('f_cstatus','Contact status',Object.entries(CONTACT),l.contactStatus||'find')}
+      <div class="grid2">${field('f_cname','Name',l.contactName)}${field('f_crole','Role',l.contactRole)}</div>
+      <div class="grid2">${field('f_email','Email',l.email,'email')}${field('f_phone','Mobile',l.phone,'tel')}</div>
+      <div class="grid2">${field('f_linkedin','LinkedIn',l.linkedin,'url')}${field('f_source','Where we found it',l.contactSource)}</div>
+      <div class="row"><button class="btn primary" type="button" id="save">${isNew?'Add lead':'Save changes'}</button>${isNew?'':'<button class="btn" type="button" id="del">Delete lead</button>'}</div>
+    </div>
+    ${isNew?'':`<div class="sec"><h3>Activity</h3>
+      <div class="row"><input id="noteTxt" placeholder="Add a note (call, reply, what they said…)" style="flex:1 1 220px;border:1px solid var(--line);background:var(--surface);border-radius:9px;padding:8px 10px;min-width:0"><button class="btn" type="button" id="addNote">Add note</button></div>
+      <div class="log" id="log"></div></div>`}
+  </div></div>`;
+  if(!isNew)refreshDynamic(l);
+}
+// Live updates never rebuild the form, so unsaved typing is kept; only stage, email preview and log refresh.
+function refreshOpen(){
+  if(!openId||openId==='__new__')return;
+  const l=leads.find(x=>x._id===openId);
+  if(!l){closeSheet();toast('This lead was deleted');return}
+  if($('#sheetRoot').dataset.for!==openId){renderSheet();return}
+  refreshDynamic(l);
+}
+
+function refreshDynamic(l){
+  const dyn=$('#dyn'); if(!dyn)return;
+  const st=STAGE[l.stage]||STAGE.new;
+  const seq=SEQ[l.stage];
+  const mail=seq?emailFor(l,seq.step):null;
+  let next='';
+  if(seq){
+    const blockers=[];
+    if(!l.email)blockers.push('No email yet. Taaj to find one, or add it below.');
+    if(seq.step===1&&!(l.personalLine||'').trim())blockers.push('No personal first line yet. Add one below before sending.');
+    next=`<div class="next"><span class="lbl">Next: ${seq.step===1?'Email 1':seq.step===4?'Final email':'Follow-up '+(seq.step-1)}${l.email?' → '+esc(l.email):''}</span>
+      ${blockers.map(b=>`<div class="warnbox">${esc(b)}</div>`).join('')}
+      <div class="mail" id="mailbox"><span class="subj">${esc(mail.subject)}</span>${esc(mail.body)}</div>
+      <div class="row"><button class="btn" type="button" id="copyMail">Copy email</button><button class="btn primary" type="button" id="markSent">Mark as sent</button></div>
+      <span class="muted" style="font-size:12px">Claude sends these from cristian@andesreserve.com.au after you approve. Marking sent moves the lead on${seq.days?` and sets the next follow-up for ${seq.days} days later`:''}.</span></div>`;
+  } else if(l.stage==='won'){
+    next=`<div class="next"><span class="lbl">Won. Add them to the ops app</span>
+      ${l.opsPushedAt?`<div class="warnbox">Already sent to the ops app on ${fmtDate(l.opsPushedAt)}. Sending again creates a duplicate customer.</div>`:''}
+      <div class="row"><a class="btn primary" id="pushOps" target="_blank" rel="noopener" href="#">Add to ops app</a><button class="btn" type="button" id="copyCust">Copy customer details</button></div>
+      <span class="muted" style="font-size:12px">Opens your ops backend in a new tab and creates a cold brew customer at $175 per 10L and $26.25 per 1.5L. A page saying "ok": true means it worked. Set the backend link once in Settings.</span></div>`;
+  }
+  dyn.innerHTML=`<h3>Stage</h3>
+    <div class="row"><span class="pill ${st.cls}">${st.label}</span>${l.nextDate&&!CLOSED.includes(l.stage)?`<span class="pill ${isDue(l)?'p-due':'p-new'}">Next action ${fmtDate(l.nextDate)}</span>`:''}</div>
+    ${next}
+    <div class="grid2">${sel('f_stage','Move to stage',STAGES.map(([k,lab])=>[k,lab]),l.stage||'new')}${field('f_next','Next action date',l.nextDate||'','date')}</div>`;
+  const log=$('#log');
+  if(log){const items=[...(l.log||[])].reverse();log.innerHTML=items.length?items.map(e=>`<div><time>${fmtDate(e.at)}</time><span><b>${esc(e.by||'')}</b> ${esc(e.text)}</span></div>`).join(''):'<span class="muted">No activity yet.</span>'}
+  wireDynamic(l,mail,seq);
+}
+
+function collectForm(){
+  const v=id=>{const e=document.getElementById(id);return e?e.value.trim():undefined};
+  const o={name:v('f_name'),kind:v('f_kind'),city:v('f_city'),venues:v('f_venues'),website:v('f_website'),priority:Number(v('f_priority')||2),assignee:v('f_assignee'),why:v('f_why'),personalLine:v('f_personal'),
+    contactStatus:v('f_cstatus'),contactName:v('f_cname'),contactRole:v('f_crole'),email:v('f_email'),phone:v('f_phone'),linkedin:v('f_linkedin'),contactSource:v('f_source')};
+  return o;
+}
+function entry(text){return {at:new Date().toISOString(),by:me,text}}
+
+async function write(id,patch){
+  if(!db){toast('Not connected, so changes can’t be saved');return false}
+  try{patch.updatedAt=new Date().toISOString();patch.updatedBy=me;await db.collection('leads').doc(id).update(patch);return true}
+  catch(e){toast(e&&e.code==='invalid_argument'?'You don’t have edit access to this pipeline':'Couldn’t save. Try again.');return false}
+}
+
+function wireDynamic(l,mail,seq){
+  const cm=$('#copyMail'); if(cm)cm.onclick=()=>copy(`Subject: ${mail.subject}\n\n${mail.body}`);
+  const ms=$('#markSent'); if(ms)ms.onclick=async()=>{
+    ms.disabled=true;
+    const label=seq.step===1?'Email 1':seq.step===4?'Final email':'Follow-up '+(seq.step-1);
+    const ok=await write(l._id,{stage:seq.to,nextDate:seq.days?addDays(seq.days):'',log:[...(l.log||[]),entry(`${label} sent`)]});
+    if(ok)toast(`${label} marked as sent`);
+    ms.disabled=false;
+  };
+  const fs=$('#f_stage'); if(fs)fs.onchange=async()=>{
+    const to=fs.value; if(to===l.stage)return;
+    const patch={stage:to,log:[...(l.log||[]),entry(`Moved to ${STAGE[to].label}`)]};
+    if(CLOSED.includes(to)||to==='won')patch.nextDate='';
+    if(await write(l._id,patch))toast(`Moved to ${STAGE[to].label}`);
+  };
+  const fn=$('#f_next'); if(fn)fn.onchange=async()=>{if(await write(l._id,{nextDate:fn.value}))toast('Next action date saved')};
+  const po=$('#pushOps'); if(po){
+    const url=ls.get('arp_ops_url','');
+    if(!url){po.removeAttribute('href');po.onclick=(e)=>{e.preventDefault();toast('Add your ops backend link in Settings first');openSettings()};}
+    else{
+      const row={name:l.name,city:(l.city||'').split(/\s*\+\s*/)[0],address:'',email:l.email||'',price10L:175,price15L:26.25,default10L:0,default15L:0,notes:`From outreach pipeline. Contact: ${[l.contactName,l.contactRole,l.phone].filter(Boolean).join(', ')}`};
+      po.href=`${url}?action=saveCustomer&payload=${encodeURIComponent(JSON.stringify({row}))}`;
+      po.onclick=()=>{write(l._id,{opsPushedAt:new Date().toISOString(),log:[...(l.log||[]),entry('Added to ops app as a customer')]})};
+    }
+  }
+  const cc=$('#copyCust'); if(cc)cc.onclick=()=>copy([l.name,l.city,l.contactName,l.contactRole,l.email,l.phone].filter(Boolean).join('\n'));
+}
+
+function wireSheet(){
+  const root=$('#sheetRoot');
+  root.onclick=async(e)=>{
+    const t=e.target;
+    if(t.id==='scrim'||t.id==='close'){closeSheet();return}
+    if(t.id==='save'){
+      const data=collectForm();
+      if(!data.name){toast('Add a name first');return}
+      if(!db){toast('Not connected, so changes can’t be saved');return}
+      t.disabled=true;
+      try{
+        if(openId==='__new__'){
+          const ref=db.collection('leads').doc();
+          await ref.set({...data,stage:'new',nextDate:'',createdAt:new Date().toISOString(),createdBy:me,updatedAt:new Date().toISOString(),log:[entry('Lead added')]});
+          openId=ref.id;toast('Lead added');
+        } else {
+          const l=leads.find(x=>x._id===openId);
+          const changes=Object.keys(data).filter(k=>String(data[k]??'')!==String(l[k]??''));
+          if(!changes.length){toast('No changes to save');t.disabled=false;return}
+          const patch={...data};
+          if(changes.includes('email')&&data.email&&l.contactStatus!=='found'&&data.contactStatus===l.contactStatus)patch.contactStatus='found';
+          patch.log=[...(l.log||[]),entry(changes.includes('email')||changes.includes('phone')?'Updated contact details':'Updated lead details')];
+          if(await write(openId,patch))toast('Saved');
+        }
+      }catch(err){toast('Couldn’t save. Try again.')}
+      t.disabled=false;
+    }
+    if(t.id==='del'){
+      if(t.dataset.confirm!=='1'){t.dataset.confirm='1';t.textContent='Tap again to delete';setTimeout(()=>{if(t.isConnected){t.dataset.confirm='';t.textContent='Delete lead'}},3000);return}
+      try{await db.collection('leads').doc(openId).delete();toast('Lead deleted');closeSheet()}catch(err){toast('Couldn’t delete')}
+    }
+    if(t.id==='addNote'){
+      const inp=$('#noteTxt'),txt=inp.value.trim();if(!txt)return;
+      const l=leads.find(x=>x._id===openId);
+      if(await write(openId,{log:[...(l.log||[]),entry(txt)]})){inp.value='';toast('Note added')}
+    }
+  };
+  root.onkeydown=(e)=>{if(e.key==='Enter'&&e.target.id==='noteTxt'){e.preventDefault();$('#addNote').click()}};
+}
+function openLead(id){openId=id;$('#sheetRoot').dataset.for='';renderSheet()}
+function closeSheet(){openId=null;$('#sheetRoot').innerHTML='';$('#sheetRoot').dataset.for=''}
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&openId)closeSheet()});
+
+// ---------- settings ----------
+function openSettings(){
+  openId=null;
+  $('#sheetRoot').innerHTML=`<div class="scrim" id="scrim2"><div class="sheet" role="dialog" aria-modal="true" aria-label="Settings">
+    <div class="sheet-h"><h2>Settings</h2><button class="x" type="button" id="close2">Close</button></div>
+    <div class="sec"><h3>Sydney trip (shared)</h3>
+      ${field('s_syd','Dates used in Sydney emails, e.g. "on the 18th and 19th of November"',settings.sydneyDates||'')}
+      <div class="row"><button class="btn primary" type="button" id="saveSyd">Save</button></div></div>
+    <div class="sec"><h3>Ops app link (this device only)</h3>
+      ${field('s_ops','Ops backend web app URL (in the ops app: Settings → API URL)',ls.get('arp_ops_url',''),'url','placeholder="https://script.google.com/macros/s/…/exec"')}
+      <div class="row"><button class="btn primary" type="button" id="saveOps">Save</button></div>
+      <span class="muted" style="font-size:12px">Used by “Add to ops app” on won leads. Stored only in this browser.</span></div>
+  </div></div>`;
+  $('#close2').onclick=$('#scrim2').onclick=(e)=>{if(e.target.id==='close2'||e.target.id==='scrim2')$('#sheetRoot').innerHTML=''};
+  $('#saveOps').onclick=()=>{const v=$('#s_ops').value.trim();if(v&&!/^https:\/\/script\.google\.com\//.test(v)){toast('That doesn’t look like an Apps Script link');return}ls.set('arp_ops_url',v);toast('Ops link saved on this device')};
+  $('#saveSyd').onclick=async()=>{if(!db){toast('Not connected');return}try{await db.doc('meta/settings').set({...settings,sydneyDates:$('#s_syd').value.trim()});toast('Sydney dates saved')}catch(e){toast('Couldn’t save')}};
+}
+
+// ---------- copy ----------
+async function copy(text){
+  try{await navigator.clipboard.writeText(text);toast('Copied')}
+  catch(e){const box=$('#mailbox');if(box){const r=document.createRange();r.selectNodeContents(box);const s=getSelection();s.removeAllRanges();s.addRange(r)}toast('Select and copy the highlighted text')}
+}
+
+// ---------- events ----------
+document.querySelector('header.top').onclick=e=>{const b=e.target.closest('[data-me]');if(!b)return;me=b.dataset.me;ls.set('arp_me',me);renderMe()};
+$('#stats').onclick=$('#chips').onclick=e=>{const b=e.target.closest('[data-f]');if(!b)return;filter=(filter===b.dataset.f&&b.classList.contains('stat'))?'all':b.dataset.f;ls.set('arp_filter',filter);renderStats();renderChips();renderList()};
+$('#q').oninput=renderList;$('#city').onchange=renderList;$('#sort').onchange=renderList;
+$('#list').onclick=e=>{const b=e.target.closest('.lead');if(b)openLead(b.dataset.id)};
+$('#add').onclick=()=>openLead('__new__');
+$('#settingsBtn').onclick=openSettings;
+wireSheet();
+renderMe();renderStats();renderChips();
+
+// ---------- data ----------
+(async()=>{
+  try{db=await (window.claude&&window.claude.use?window.claude.use('db'):null)}catch(e){db=null}
+  if(!db){
+    loaded=true;leads=[];
+    const b=$('#banner');b.hidden=false;b.textContent='Sign in to claude.ai and open this from the shared link to see the pipeline.';
+    $('#list').innerHTML='<div class="empty">The pipeline is stored online and isn’t available in this view.</div>';
+    renderStats();renderChips();return;
+  }
+  db.doc('meta/settings').onSnapshot(s=>{settings=s.exists?{...s.data()}:{sydneyDates:''};refreshOpen()},()=>{});
+  db.collection('leads').onSnapshot(snap=>{
+    leads=snap.docs.map(d=>({...d.data(),_id:d.id}));loaded=true;renderAll();
+  },err=>{
+    loaded=true;const b=$('#banner');b.hidden=false;
+    b.textContent=err&&err.code==='revoked'?'Your access to this pipeline changed. Reload to continue.':'Couldn’t load the pipeline. Reload the page to try again.';
+    renderList();
+  });
+})();
+</script>
