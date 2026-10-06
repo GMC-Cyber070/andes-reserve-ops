@@ -348,7 +348,7 @@ function refreshDynamic(l){
     next=`<div class="next"><span class="lbl">Won. Add them to the ops app</span>
       ${l.opsPushedAt?`<div class="warnbox">Already sent to the ops app on ${fmtDate(l.opsPushedAt)}. Sending again creates a duplicate customer.</div>`:''}
       <div class="row"><a class="btn primary" id="pushOps" target="_blank" rel="noopener" href="#">Add to ops app</a><button class="btn" type="button" id="copyCust">Copy customer details</button></div>
-      <span class="muted" style="font-size:12px">Opens your ops backend in a new tab and creates a cold brew customer at $175 per 10L and $26.25 per 1.5L. A page saying "ok": true means it worked. Set the backend link once in Settings.</span></div>`;
+      <span class="muted" style="font-size:12px">Opens your ops backend in a new tab and creates a cold brew customer at $175 per 10L and $36 per 1.5L. A page saying "ok": true means it worked. Set the backend link once in Settings.</span></div>`;
   }
   dyn.innerHTML=`<h3>Stage</h3>
     <div class="row"><span class="pill ${st.cls}">${st.label}</span>${l.nextDate&&!CLOSED.includes(l.stage)?`<span class="pill ${isDue(l)?'p-due':'p-new'}">Next action ${fmtDate(l.nextDate)}</span>`:''}</div>
@@ -393,7 +393,7 @@ function wireDynamic(l,mail,seq){
     const url=ls.get('arp_ops_url','');
     if(!url){po.removeAttribute('href');po.onclick=(e)=>{e.preventDefault();toast('Add your ops backend link in Settings first');openSettings()};}
     else{
-      const row={name:l.name,city:(l.city||'').split(/\s*\+\s*/)[0],address:'',email:l.email||'',price10L:175,price15L:26.25,default10L:0,default15L:0,notes:`From outreach pipeline. Contact: ${[l.contactName,l.contactRole,l.phone].filter(Boolean).join(', ')}`};
+      const row={name:l.name,city:(l.city||'').split(/\s*\+\s*/)[0],address:'',email:l.email||'',price10L:175,price15L:36,default10L:0,default15L:0,notes:`From outreach pipeline. Contact: ${[l.contactName,l.contactRole,l.phone].filter(Boolean).join(', ')}`};
       po.href=`${url}?action=saveCustomer&payload=${encodeURIComponent(JSON.stringify({row}))}`;
       po.onclick=()=>{write(l._id,{opsPushedAt:new Date().toISOString(),log:[...(l.log||[]),entry('Added to ops app as a customer')]})};
     }
